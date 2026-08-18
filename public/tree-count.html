@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tree Count Checker (local)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #EAEDDF; min-height: 100vh; }
+  body { padding: 32px 16px 64px; box-sizing: border-box; }
+  * { box-sizing: border-box; }
+
+  .cat-root {
+    --bg: #F3F5EE; --panel: #FBFCF8; --ink: #2B2620; --ink-soft: #6B6A5C;
+    --moss: #4B6043; --moss-deep: #384A32; --sprout: #6E8F4E;
+    --turmeric: #C98A2E; --rust: #B34A3A; --line: #DCDCC9;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink); background: var(--bg); border-radius: 12px;
+    padding: 20px; max-width: 1080px; margin: 0 auto; border: 1px solid var(--line);
+  }
+  .cat-loading { padding: 40px; text-align: center; color: var(--ink-soft); }
+  .cat-h1 { font-family: 'Source Serif 4', serif; font-weight: 600; font-size: 1.5rem; letter-spacing: -0.01em; margin: 0; }
+  .cat-subtitle { font-size: 0.82rem; color: var(--ink-soft); margin-top: 4px; }
+  .cat-subtitle code { background: #E9EBDF; padding: 1px 5px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; }
+  .cat-mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .cat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  .p4 { padding: 16px; }
+  .mb2 { margin-bottom: 8px; } .mb3 { margin-bottom: 12px; } .mb4 { margin-bottom: 16px; }
+  .mt1 { margin-top: 4px; } .mt2 { margin-top: 8px; } .mt3 { margin-top: 12px; }
+
+  .cat-btn {
+    font-family: inherit; font-size: 0.85rem; font-weight: 500; border-radius: 7px;
+    padding: 8px 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .cat-btn:hover:not(:disabled) { background: #EFF1E5; }
+  .cat-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .cat-btn-primary { background: var(--moss); border-color: var(--moss); color: #F7F8F1; }
+  .cat-btn-primary:hover:not(:disabled) { background: var(--moss-deep); }
+  .cat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 500; }
+  textarea.cat-input {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem; width: 100%;
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: #fff; color: var(--ink); resize: vertical;
+  }
+  .cat-upload { position: relative; overflow: hidden; }
+  .cat-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .cat-row { display: flex; align-items: center; } .cat-wrap { flex-wrap: wrap; }
+  .cat-gap2 { gap: 10px; } .cat-between { justify-content: space-between; }
+  .cat-spacer { flex: 1; }
+  .cat-filename { font-size: 0.8rem; color: var(--ink-soft); }
+  .cat-spinner { display: inline-block; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: cat-spin 0.7s linear infinite; vertical-align: -1px; }
+  @keyframes cat-spin { to { transform: rotate(360deg); } }
+
+  .cat-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .cat-stat { padding: 6px 12px; border-radius: 8px; background: #EEF0E4; font-size: 0.85rem; }
+  .cat-stat b { font-size: 1.05rem; }
+  .cat-stat.flag b { color: var(--rust); }
+  .cat-stat.low b { color: var(--turmeric); }
+  .cat-stat.ok b { color: var(--moss); }
+
+  .cat-tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  .cat-tablewrap.short { max-height: 280px; overflow-y: auto; }
+  table.cat-table { border-collapse: collapse; width: 100%; font-size: 0.83rem; }
+  table.cat-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--line); background: #F0F2E8; position: sticky; top: 0; white-space: nowrap; }
+  table.cat-table td { padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.cat-table td.note { white-space: normal; color: var(--ink-soft); font-size: 0.78rem; }
+  tr.st-flag { background: #F9E7E3; }
+  tr.st-low { background: #FBF2DF; }
+  tr.st-error { background: #EFEFE7; }
+  .cat-badge { padding: 2px 9px; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+  .cat-badge.ok { background: #E4EBDE; color: var(--moss-deep); }
+  .cat-badge.flag { background: #F7DDD7; color: var(--rust); }
+  .cat-badge.low { background: #FBEACB; color: var(--turmeric); }
+  .cat-badge.error { background: #E6E6DC; color: var(--ink-soft); }
+  .cat-empty { color: var(--ink-soft); font-size: 0.85rem; margin: 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+const DEFAULT_TOKEN =
+  'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5rcmlzaGl2YWFzLmluL2FwaS92MS9sb2dpbiIsImlhdCI6MTc4Njk0NzM5MCwiZXhwIjoxNzg5NTM5MzkwLCJuYmYiOjE3ODY5NDczOTAsImp0aSI6Ilk5ZHc5UHJQWjV3dmxpZVgiLCJzdWIiOiI4NTAiLCJwcnYiOiJmZjY2ZDA3ZjZkNDYyNzMzYmIyOWMzN2QyYTU5YmViZjZiZDY2NjQwIn0.gf1FCgmOt4N-tcTA9UWb-v0VJ_7sfX7Zej8HapppkvI';
+
+const SEED_ROWS = [{ crop_id: 6711, org_id: 148 }];
+const PER_ACRE_MIN = 57;
+const PER_ACRE_MAX = 60;
+const LATEST_DATE = new Date().toISOString().slice(0, 10);
+
+// --- crop-health-horti: serialise so concurrent calls never contaminate ---
+// This krishivaas endpoint keeps per-user state; firing several at once returns
+// the FIRST crop's tree_count for all of them. The queue keeps exactly one in
+// flight at a time.
+let chQueue = Promise.resolve();
+function getTreeCount(args) {
+  const run = () => fetchTreeCount(args);
+  const result = chQueue.then(run, run);
+  chQueue = result.catch(() => {});
+  return result;
+}
+async function fetchTreeCount({ token, crop_id, org_id }) {
+  const res = await fetch('/api/tree-count', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, crop_id, org_id }),
+  });
+  const out = await res.json();
+  const j = out && out.data;
+  if (!j || !j.success || !j.response) {
+    return { tree_count: null, error: (j && j.response) || out.error || 'No Data' };
+  }
+  return {
+    tree_count: j.response.tree_count != null ? j.response.tree_count : null,
+    sowing_date: j.response.sowing_date || null,
+  };
+}
+
+async function getAcres({ token, crop_id, org_id }) {
+  const res = await fetch('/api/crop-details', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, crop_id, org_id, latest_date: LATEST_DATE }),
+  });
+  const out = await res.json();
+  const row = out && out.data && out.data.data && out.data.data[0];
+  if (!row) return { acres: null, error: 'No crop details found' };
+  return {
+    acres: row.crop_area_calculated != null ? row.crop_area_calculated : (row.crop_captured_acreage || null),
+    farmer_name: row.farmer_name || '',
+    crop_name: row.crop_name || '',
+  };
+}
+
+function classify(treeCount, acres) {
+  if (treeCount == null || acres == null || Number(acres) <= 0) {
+    return { perAcre: null, expectedMin: null, expectedMax: null, status: 'ERROR', label: 'Missing data' };
+  }
+  const a = Number(acres), tc = Number(treeCount);
+  const expectedMin = a * PER_ACRE_MIN, expectedMax = a * PER_ACRE_MAX, perAcre = tc / a;
+  if (tc > expectedMax) return { perAcre, expectedMin, expectedMax, status: 'FLAG', label: `Over expected max (${expectedMax.toFixed(0)})` };
+  if (tc < expectedMin) return { perAcre, expectedMin, expectedMax, status: 'LOW', label: `Under expected min (${expectedMin.toFixed(0)})` };
+  return { perAcre, expectedMin, expectedMax, status: 'OK', label: `Within ${expectedMin.toFixed(0)}–${expectedMax.toFixed(0)}` };
+}
+
+function normalizeRows(raw) {
+  return raw.map((r) => {
+    const get = (keys) => {
+      for (const k of Object.keys(r)) {
+        const kn = k.toLowerCase().replace(/[\s_]/g, '');
+        if (keys.includes(kn)) return r[k];
+      }
+      return undefined;
+    };
+    return { crop_id: get(['cropid']) ?? '', org_id: get(['orgid']) ?? '' };
+  }).filter((r) => r.crop_id !== '');
+}
+
+async function runPool(items, worker, concurrency, onProgress) {
+  const results = new Array(items.length);
+  let idx = 0, done = 0;
+  async function next() {
+    const i = idx++;
+    if (i >= items.length) return;
+    results[i] = await worker(items[i], i);
+    done++; onProgress(done, items.length);
+    return next();
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, next));
+  return results;
+}
+
+function App() {
+  const [token, setToken] = useState(DEFAULT_TOKEN);
+  const [rows, setRows] = useState(SEED_ROWS);
+  const [fileName, setFileName] = useState('(built-in seed row)');
+  const [results, setResults] = useState([]);
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+
+  function onFile(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const wb = XLSX.read(ev.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const norm = normalizeRows(json);
+      setRows(norm);
+      setFileName(`${file.name} (${norm.length} rows)`);
+      setResults([]);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function run() {
+    setRunning(true); setResults([]); setProgress({ done: 0, total: rows.length });
+    const out = await runPool(rows, async (row) => {
+      try {
+        const [tc, ac] = await Promise.all([
+          getTreeCount({ token, crop_id: row.crop_id, org_id: row.org_id }),
+          getAcres({ token, crop_id: row.crop_id, org_id: row.org_id }),
+        ]);
+        const cls = classify(tc.tree_count, ac.acres);
+        return { row, tc, ac, cls, error: tc.error || ac.error || null };
+      } catch (err) {
+        return { row, error: String((err && err.message) || err) };
+      }
+    }, 4, (done, total) => setProgress({ done, total }));
+    setResults(out); setRunning(false);
+  }
+
+  const flagged = useMemo(() => results.filter((r) => r && r.cls && r.cls.status === 'FLAG'), [results]);
+
+  function exportCsv(onlyFlagged) {
+    const src = onlyFlagged ? flagged : results;
+    const header = ['crop_id','org_id','tree_count','acres','expected_min','expected_max','trees_per_acre','status','farmer_name','note'];
+    const c = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+    const lines = src.map((r) => [
+      r.row.crop_id, r.row.org_id,
+      r.tc && r.tc.tree_count != null ? r.tc.tree_count : '',
+      r.ac && r.ac.acres != null ? r.ac.acres : '',
+      r.cls && r.cls.expectedMin != null ? r.cls.expectedMin.toFixed(0) : '',
+      r.cls && r.cls.expectedMax != null ? r.cls.expectedMax.toFixed(0) : '',
+      r.cls && r.cls.perAcre != null ? r.cls.perAcre.toFixed(2) : '',
+      r.cls ? r.cls.status : 'ERROR',
+      r.ac ? r.ac.farmer_name : '',
+      r.error || (r.cls ? r.cls.label : ''),
+    ].map(c).join(','));
+    const csv = [header.join(','), ...lines].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = onlyFlagged ? 'flagged-crops.csv' : 'tree-count-results.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
+  const count = (s) => results.filter((r) => r && ((s === 'ERROR' && (r.error || (r.cls && r.cls.status === 'ERROR'))) || (r.cls && r.cls.status === s && !r.error))).length;
+
+  return (
+    <div className="cat-root">
+      <div className="mb4">
+        <h1 className="cat-h1">🌴 Tree Count Checker</h1>
+        <div className="cat-subtitle">
+          Each acre should hold <b>{PER_ACRE_MIN}–{PER_ACRE_MAX}</b> trees, so the whole plot should hold{' '}
+          <code>acres × {PER_ACRE_MIN}</code> to <code>acres × {PER_ACRE_MAX}</code> (e.g. 3 acres → 171–180).
+          A crop is <b>flagged</b> when <code>tree_count &gt; acres × {PER_ACRE_MAX}</code>.
+        </div>
+      </div>
+
+      <div className="cat-card p4 mb4">
+        <div className="cat-label mb2">Bearer token</div>
+        <textarea className="cat-input" rows={3} value={token} spellCheck={false} onChange={(e) => setToken(e.target.value)} />
+        <div className="cat-row cat-wrap cat-gap2 mt3">
+          <label className="cat-btn cat-upload">
+            <input type="file" accept=".xlsx,.xls,.csv" onChange={onFile} />
+            📄 Upload Excel
+          </label>
+          <span className="cat-filename">{fileName}</span>
+          <span className="cat-spacer"></span>
+          <button className="cat-btn cat-btn-primary" onClick={run} disabled={running || !rows.length}>
+            {running ? <><span className="cat-spinner"></span> Running {progress.done}/{progress.total}…</> : `Run check (${rows.length} rows)`}
+          </button>
+        </div>
+      </div>
+
+      <div className="cat-card p4 mb4">
+        <div className="cat-row cat-between cat-wrap cat-gap2 mb2">
+          <div className="cat-label">Loaded rows ({rows.length})</div>
+          <span className="cat-filename">{fileName}</span>
+        </div>
+        {rows.length === 0 ? (
+          <p className="cat-empty">No rows. Upload an Excel/CSV with <b>crop_id</b> and <b>org_id</b> columns.</p>
+        ) : (
+          <div className="cat-tablewrap short">
+            <table className="cat-table">
+              <thead><tr><th style={{ width: 60 }}>#</th><th>crop_id</th><th>org_id</th></tr></thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i}><td>{i + 1}</td><td className="cat-mono">{r.crop_id}</td><td className="cat-mono">{r.org_id}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {results.length > 0 && (
+        <div className="cat-card p4 mb4 cat-summary">
+          <div className="cat-stat ok"><b>{count('OK')}</b> within range</div>
+          <div className="cat-stat flag"><b>{flagged.length}</b> flagged (&gt; acres×{PER_ACRE_MAX})</div>
+          <div className="cat-stat low"><b>{count('LOW')}</b> low (&lt; acres×{PER_ACRE_MIN})</div>
+          <div className="cat-stat"><b>{count('ERROR')}</b> errors</div>
+          <span className="cat-spacer"></span>
+          <button className="cat-btn" onClick={() => exportCsv(true)} disabled={!flagged.length}>Export flagged CSV</button>
+          <button className="cat-btn" onClick={() => exportCsv(false)}>Export all CSV</button>
+        </div>
+      )}
+
+      {results.length > 0 && (
+        <div className="cat-tablewrap">
+          <table className="cat-table">
+            <thead>
+              <tr>
+                <th>crop_id</th><th>org_id</th><th>tree_count</th><th>acres</th>
+                <th>expected (min–max)</th><th>trees / acre</th><th>status</th><th>farmer</th><th>note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((r, i) => {
+                const status = r.error ? 'ERROR' : (r.cls && r.cls.status);
+                const range = r.cls && r.cls.expectedMin != null ? `${r.cls.expectedMin.toFixed(0)}–${r.cls.expectedMax.toFixed(0)}` : '—';
+                return (
+                  <tr key={i} className={`st-${status ? status.toLowerCase() : ''}`}>
+                    <td className="cat-mono">{r.row.crop_id}</td>
+                    <td className="cat-mono">{r.row.org_id}</td>
+                    <td className="cat-mono">{r.tc && r.tc.tree_count != null ? r.tc.tree_count : '—'}</td>
+                    <td className="cat-mono">{r.ac && r.ac.acres != null ? r.ac.acres : '—'}</td>
+                    <td className="cat-mono">{range}</td>
+                    <td className="cat-mono">{r.cls && r.cls.perAcre != null ? r.cls.perAcre.toFixed(2) : '—'}</td>
+                    <td><span className={`cat-badge ${status ? status.toLowerCase() : ''}`}>{status}</span></td>
+                    <td>{r.ac ? (r.ac.farmer_name || '—') : '—'}</td>
+                    <td className="note">{r.error || (r.cls ? r.cls.label : '')}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

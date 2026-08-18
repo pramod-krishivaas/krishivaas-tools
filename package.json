@@ -1,0 +1,16 @@
+{
+  "name": "krishivaas-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unified local tool suite: Crop Allocation Ledger + Tree Count Checker, served from one Express server with a sidebar.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

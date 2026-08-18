@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Crop Allocation Ledger (local)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #EAEDDF; min-height: 100vh; }
+  body { padding: 32px 16px 64px; box-sizing: border-box; }
+  * { box-sizing: border-box; }
+
+  .cat-root {
+    --bg: #F3F5EE; --panel: #FBFCF8; --ink: #2B2620; --ink-soft: #6B6A5C;
+    --moss: #4B6043; --moss-deep: #384A32; --sprout: #6E8F4E;
+    --turmeric: #C98A2E; --rust: #B34A3A; --line: #DCDCC9;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink); background: var(--bg); border-radius: 12px;
+    padding: 20px; max-width: 980px; margin: 0 auto;
+    border: 1px solid var(--line);
+  }
+  .cat-loading { padding: 40px; text-align: center; color: var(--ink-soft); }
+  .cat-h1 { font-family: 'Source Serif 4', serif; font-weight: 600; font-size: 1.5rem; letter-spacing: -0.01em; margin: 0; }
+  .cat-subtitle { font-size: 0.78rem; color: var(--ink-soft); margin-top: 2px; }
+  .cat-mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+  .cat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  .cat-btn {
+    font-family: inherit; font-size: 0.85rem; font-weight: 500; border-radius: 7px;
+    padding: 7px 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  .cat-btn:hover:not(:disabled) { background: #EFF1E5; }
+  .cat-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .cat-btn:focus-visible { outline: 2px solid var(--moss); outline-offset: 1px; }
+  .cat-btn-primary { background: var(--moss); border-color: var(--moss); color: #F7F8F1; }
+  .cat-btn-primary:hover:not(:disabled) { background: var(--moss-deep); }
+  .cat-btn-danger { color: var(--rust); border-color: #E3BDB4; }
+  .cat-btn-danger:hover:not(:disabled) { background: #FBF0EE; }
+  .cat-input {
+    font-family: inherit; font-size: 0.85rem; border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 8px; background: #fff; color: var(--ink); width: 100%;
+  }
+  .cat-input:focus { outline: 2px solid var(--moss); outline-offset: 1px; }
+  .cat-input:disabled { background: #F1F2EA; color: var(--ink-soft); }
+  .cat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 500; }
+  .cat-tick { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--line); background: #fff; cursor: pointer; padding: 0; }
+  .cat-tick.done { background: var(--sprout); border-color: var(--sprout); }
+  .cat-tick.error { background: var(--rust); border-color: var(--rust); }
+  .cat-tick.active { border-color: var(--turmeric); border-width: 2px; }
+  .cat-tick.current { box-shadow: 0 0 0 2px var(--ink); }
+  .cat-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; font-weight: 500; padding: 3px 8px; border-radius: 999px; }
+  .cat-pill.pending { background: #ECEDE1; color: var(--ink-soft); }
+  .cat-pill.submitting { background: #FBF0DC; color: var(--turmeric); }
+  .cat-pill.done { background: #E4EBDE; color: var(--moss-deep); }
+  .cat-pill.error { background: #F7E4E0; color: var(--rust); }
+  .cat-table-wrap { overflow-x: auto; }
+  table.cat-table { border-collapse: collapse; width: 100%; min-width: 720px; }
+  table.cat-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  table.cat-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .cat-progress-bar { height: 6px; border-radius: 999px; background: #E4E5D6; overflow: hidden; }
+  .cat-progress-fill { height: 100%; background: var(--moss); transition: width 300ms ease; }
+  .cat-notice { border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; }
+  .cat-notice.error { background: #F7E4E0; color: var(--rust); }
+  .cat-notice.info { background: #E4EBDE; color: var(--moss-deep); }
+  .cat-msg { font-size: 0.72rem; color: var(--ink-soft); max-width: 260px; overflow-wrap: break-word; }
+  textarea.cat-input { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; resize: vertical; }
+  .cat-spinner { display: inline-block; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: cat-spin 0.7s linear infinite; vertical-align: -1px; }
+  @keyframes cat-spin { to { transform: rotate(360deg); } }
+  .cat-flex { display: flex; }
+  .cat-row { display: flex; align-items: center; }
+  .cat-wrap { flex-wrap: wrap; }
+  .cat-between { justify-content: space-between; }
+  .cat-gap1 { gap: 4px; } .cat-gap2 { gap: 8px; }
+  .cat-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mb1 { margin-bottom: 4px; } .mb2 { margin-bottom: 8px; } .mb3 { margin-bottom: 12px; } .mb4 { margin-bottom: 16px; }
+  .mt1 { margin-top: 4px; } .mt2 { margin-top: 8px; } .mt3 { margin-top: 12px; }
+  .p4 { padding: 16px; }
+  .text-sm { font-size: 0.85rem; }
+  @media (max-width: 640px) { .cat-grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const BATCH_SIZE = 5;
+const DEFAULT_TOTAL = 620;
+
+const DEFAULT_SETTINGS = {
+  bearer_token: '',
+  ccn_id: '210',
+  crop_name: 'Red Gram-Karnataka',
+  crpdu_value: '',
+  crop_duration: 'medium:180:3600',
+  crpduty_value: '',
+  crop_duration_type: 'Direct Sowing',
+  intercrop_ccn_id: '',
+  intercrop_crop_name: '',
+  intercrop_crpdu_value: '',
+  intercrop_crpduty_value: '',
+  sowing_date: '2026-06-30',
+  harvest_date: '2026-12-27',
+  platform: 'web',
+};
+
+function makeRecord(id, flu_id, fmr_id) {
+  return { id, flu_id: flu_id || '', fmr_id: fmr_id || '', status: 'pending', message: '', startedAt: null };
+}
+
+function csvEscape(v) {
+  const s = String(v == null ? '' : v);
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+async function loadState() {
+  try {
+    const res = await fetch('/api/state');
+    return await res.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+async function persist(records, settings, batchStart) {
+  try {
+    await fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ records, settings, batchStart }),
+    });
+  } catch (e) {
+    console.error('save failed', e);
+  }
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <div className="cat-label mb1">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+function StatusPill({ status }) {
+  if (status === 'done') return <span className="cat-pill done">✓ Done</span>;
+  if (status === 'error') return <span className="cat-pill error">! Error</span>;
+  if (status === 'submitting') return <span className="cat-pill submitting"><span className="cat-spinner"></span> Sending</span>;
+  return <span className="cat-pill pending">Pending</span>;
+}
+
+function CropAllocationLedger() {
+  const [records, setRecords] = useState([]);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [batchStart, setBatchStart] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [addCount, setAddCount] = useState(5);
+  const [busyBatch, setBusyBatch] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [tick, setTick] = useState(0);
+  const saveTimer = useRef(null);
+
+  useEffect(() => {
+    const anySubmitting = records.some((r) => r.status === 'submitting');
+    if (!anySubmitting) return;
+    const t = setInterval(() => setTick((x) => x + 1), 400);
+    return () => clearInterval(t);
+  }, [records]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const data = await loadState();
+      if (cancelled) return;
+      const storedSettings = data && data.settings ? data.settings : null;
+      const storedRecords = data && Array.isArray(data.records) ? data.records : null;
+      const storedBatchStart = data && typeof data.batchStart === 'number' ? data.batchStart : 0;
+
+      const mergedSettings = storedSettings ? { ...DEFAULT_SETTINGS, ...storedSettings } : DEFAULT_SETTINGS;
+      let finalRecords = storedRecords;
+      if (!finalRecords || !finalRecords.length) {
+        finalRecords = Array.from({ length: DEFAULT_TOTAL }, (_, i) => makeRecord(i));
+        persist(finalRecords, mergedSettings, storedBatchStart);
+      }
+      setRecords(finalRecords);
+      setSettings(mergedSettings);
+      setBatchStart(storedBatchStart);
+      setLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  function updateSettingField(field, value) {
+    setSettings((prev) => {
+      const next = { ...prev, [field]: value };
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => persist(records, next, batchStart), 600);
+      return next;
+    });
+  }
+
+  function updateRecordField(id, field, value) {
+    setRecords((prev) => {
+      const next = prev.map((r) => (r.id === id ? { ...r, [field]: value } : r));
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => persist(next, settings, batchStart), 600);
+      return next;
+    });
+  }
+
+  function unlockRow(id) {
+    setRecords((prev) => {
+      const next = prev.map((r) => (r.id === id ? { ...r, status: 'pending', message: '' } : r));
+      persist(next, settings, batchStart);
+      return next;
+    });
+  }
+
+  function goToBatch(start) {
+    const clamped = Math.max(0, Math.min(start, Math.max(0, records.length - 1)));
+    setBatchStart(clamped);
+    persist(records, settings, clamped);
+  }
+
+  function jumpToFirstPending() {
+    const idx = records.findIndex((r) => r.status !== 'done');
+    if (idx >= 0) goToBatch(Math.floor(idx / BATCH_SIZE) * BATCH_SIZE);
+  }
+
+  // Set a record's status/message and persist. Used for both errors and results.
+  function setRecordStatus(id, status, message) {
+    setRecords((prev) => {
+      const next = prev.map((r) => (r.id === id ? { ...r, status, message } : r));
+      persist(next, settings, batchStart);
+      return next;
+    });
+  }
+
+  async function submitOne(id) {
+    // Read the record straight from current state — do NOT read back a value
+    // assigned inside a setRecords updater, because React runs that updater
+    // asynchronously (the value would still be null and the row would hang
+    // forever on "Sending"). See the earlier bug where the fetch never fired.
+    const rec = records.find((r) => r.id === id);
+    if (!rec) return false;
+
+    // Validate BEFORE flipping to "submitting", so a bad row shows the error
+    // immediately instead of a spinner.
+    if (!rec.flu_id || !rec.fmr_id) {
+      setRecordStatus(id, 'error', 'Missing flu_id or fmr_id');
+      return false;
+    }
+    if (!settings.crop_name) {
+      setRecordStatus(id, 'error', 'Set the crop name in Defaults first');
+      return false;
+    }
+    if (!settings.sowing_date || !settings.harvest_date) {
+      setRecordStatus(id, 'error', 'Set sowing/harvest date in Defaults first');
+      return false;
+    }
+    if (!settings.bearer_token) {
+      setRecordStatus(id, 'error', 'Paste your bearer token into Defaults first');
+      return false;
+    }
+
+    // All checks passed — now show the spinner and fire the request.
+    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'submitting', message: '', startedAt: Date.now() } : r)));
+
+    try {
+      const payload = {
+        flu_id: rec.flu_id, fmr_id: rec.fmr_id, ccn_id: settings.ccn_id, crop_name: settings.crop_name,
+        crpdu_value: settings.crpdu_value, crop_duration: settings.crop_duration,
+        crpduty_value: settings.crpduty_value, crop_duration_type: settings.crop_duration_type,
+        intercrop_ccn_id: settings.intercrop_ccn_id, intercrop_crop_name: settings.intercrop_crop_name,
+        intercrop_crpdu_value: settings.intercrop_crpdu_value, intercrop_crpduty_value: settings.intercrop_crpduty_value,
+        token: settings.bearer_token, sowing_date: settings.sowing_date, harvest_date: settings.harvest_date,
+        platform: settings.platform,
+      };
+      const resp = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await resp.json();
+      let parsed = null;
+      try { parsed = JSON.parse(result.body); } catch (e) { /* not JSON */ }
+      const serverMsg = (parsed && (parsed.message || parsed.msg)) || (result.body || '').slice(0, 160) || (result.ok ? 'Submitted' : `HTTP ${result.status}`);
+      const timing = typeof result.ms === 'number' ? ` (${(result.ms / 1000).toFixed(1)}s)` : '';
+
+      setRecordStatus(id, result.ok ? 'done' : 'error', serverMsg + timing);
+      return result.ok;
+    } catch (e) {
+      const msg = 'Local server request failed: ' + (e && e.message ? e.message : '');
+      setRecordStatus(id, 'error', msg);
+      return false;
+    }
+  }
+
+  async function submitBatch() {
+    setBusyBatch(true);
+    const ids = records.slice(batchStart, batchStart + BATCH_SIZE).filter((r) => r.status !== 'done').map((r) => r.id);
+    for (const id of ids) {
+      await submitOne(id);
+    }
+    setBusyBatch(false);
+  }
+
+  function addBlankRecords() {
+    const n = Math.max(1, Math.min(1000, Number(addCount) || 0));
+    const startId = records.length ? Math.max(...records.map((r) => r.id)) + 1 : 0;
+    const newRows = Array.from({ length: n }, (_, i) => makeRecord(startId + i));
+    const next = [...records, ...newRows];
+    setRecords(next);
+    setNotice({ type: 'info', text: `Added ${n} blank record${n === 1 ? '' : 's'}. ${next.length} total.` });
+    persist(next, settings, batchStart);
+  }
+
+  function exportCsv() {
+    const header = ['flu_id', 'fmr_id', 'crop_name', 'sowing_date', 'harvest_date', 'status', 'message'];
+    const lines = [header.join(',')];
+    records.forEach((r) => {
+      lines.push([r.flu_id, r.fmr_id, settings.crop_name, settings.sowing_date, settings.harvest_date, r.status, r.message || ''].map(csvEscape).join(','));
+    });
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `crop-allocation-status-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function doResetAll() {
+    const next = records.map((r) => ({ ...r, flu_id: '', fmr_id: '', status: 'pending', message: '', startedAt: null }));
+    setRecords(next);
+    setBatchStart(0);
+    setConfirmClear(false);
+    persist(next, settings, 0);
+  }
+
+  if (!loaded) {
+    return <div className="cat-root cat-loading">Loading ledger…</div>;
+  }
+
+  const total = records.length;
+  const doneCount = records.filter((r) => r.status === 'done').length;
+  const errorCount = records.filter((r) => r.status === 'error').length;
+  const pendingCount = total - doneCount - errorCount;
+  const totalBatches = Math.max(1, Math.ceil(total / BATCH_SIZE));
+  const currentBatchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+  const batch = records.slice(batchStart, batchStart + BATCH_SIZE);
+  const pct = total ? Math.round((doneCount / total) * 100) : 0;
+
+  function batchStatus(bIdx) {
+    const slice = records.slice(bIdx * BATCH_SIZE, bIdx * BATCH_SIZE + BATCH_SIZE);
+    if (!slice.length) return 'pending';
+    if (slice.every((r) => r.status === 'done')) return 'done';
+    if (slice.some((r) => r.status === 'error')) return 'error';
+    if (slice.some((r) => r.status === 'submitting')) return 'active';
+    return 'pending';
+  }
+
+  return (
+    <div className="cat-root">
+      <div className="cat-row cat-between cat-wrap cat-gap2 mb4">
+        <div>
+          <h1 className="cat-h1">🌱 Crop Allocation Ledger</h1>
+          <div className="cat-subtitle">Running locally — submissions go server-to-server, no browser CORS</div>
+        </div>
+        <div className="cat-row cat-gap2">
+          <button className="cat-btn" onClick={() => setSettingsOpen((s) => !s)}>Defaults</button>
+          <button className="cat-btn" onClick={exportCsv} disabled={!total}>Export CSV ({total})</button>
+        </div>
+      </div>
+
+      {notice && <div className={`cat-notice ${notice.type} mb3`}>{notice.text}</div>}
+
+      {total > 0 && (
+        <div className="cat-card p4 mb4">
+          <div className="cat-row cat-between mb2 text-sm">
+            <span><strong>{doneCount}</strong> of <strong>{total}</strong> submitted · {pendingCount} pending · {errorCount} error{errorCount === 1 ? '' : 's'}</span>
+            <span className="cat-mono" style={{ color: 'var(--ink-soft)' }}>{pct}%</span>
+          </div>
+          <div className="cat-progress-bar mb3">
+            <div className="cat-progress-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="cat-row cat-wrap cat-gap1">
+            {Array.from({ length: totalBatches }).map((_, i) => {
+              const st = batchStatus(i);
+              const isCurrent = i === Math.floor(batchStart / BATCH_SIZE);
+              return (
+                <button
+                  key={i}
+                  title={`Batch ${i + 1} (records ${i * BATCH_SIZE + 1}–${Math.min((i + 1) * BATCH_SIZE, total)})`}
+                  className={`cat-tick ${st} ${isCurrent ? 'current' : ''}`}
+                  onClick={() => goToBatch(i * BATCH_SIZE)}
+                />
+              );
+            })}
+          </div>
+          <div className="cat-row cat-gap2 mt3">
+            <span className="cat-msg">Need more than {total} records?</span>
+            <input type="number" min="1" className="cat-input cat-mono" style={{ width: 64 }} value={addCount} onChange={(e) => setAddCount(e.target.value)} />
+            <button className="cat-btn" onClick={addBlankRecords}>+ Add blank records</button>
+          </div>
+        </div>
+      )}
+
+      {settingsOpen && (
+        <div className="cat-card p4 mb4">
+          <div className="cat-label mb2">Shared defaults — applied to every record on submit</div>
+          <div className="cat-grid2">
+            <Field label="Crop name (all records)">
+              <input className="cat-input" value={settings.crop_name} onChange={(e) => updateSettingField('crop_name', e.target.value)} placeholder="e.g. Red Gram-Karnataka" />
+            </Field>
+            <Field label="Crop code (ccn_id)">
+              <input className="cat-input cat-mono" value={settings.ccn_id} onChange={(e) => updateSettingField('ccn_id', e.target.value)} />
+            </Field>
+            <Field label="Sowing date (all records)">
+              <input type="date" className="cat-input cat-mono" value={settings.sowing_date} onChange={(e) => updateSettingField('sowing_date', e.target.value)} />
+            </Field>
+            <Field label="Harvest date (all records)">
+              <input type="date" className="cat-input cat-mono" value={settings.harvest_date} onChange={(e) => updateSettingField('harvest_date', e.target.value)} />
+            </Field>
+            <Field label="Bearer token / API token">
+              <textarea className="cat-input" rows={2} value={settings.bearer_token} onChange={(e) => updateSettingField('bearer_token', e.target.value)} placeholder="Paste the JWT from your krishivaas login" />
+            </Field>
+            <Field label="Crop duration">
+              <input className="cat-input cat-mono" value={settings.crop_duration} onChange={(e) => updateSettingField('crop_duration', e.target.value)} />
+            </Field>
+            <Field label="Crop duration type">
+              <input className="cat-input" value={settings.crop_duration_type} onChange={(e) => updateSettingField('crop_duration_type', e.target.value)} />
+            </Field>
+            <Field label="crpdu_value">
+              <input className="cat-input" value={settings.crpdu_value} onChange={(e) => updateSettingField('crpdu_value', e.target.value)} />
+            </Field>
+            <Field label="crpduty_value">
+              <input className="cat-input" value={settings.crpduty_value} onChange={(e) => updateSettingField('crpduty_value', e.target.value)} />
+            </Field>
+            <Field label="Intercrop code (optional)">
+              <input className="cat-input cat-mono" value={settings.intercrop_ccn_id} onChange={(e) => updateSettingField('intercrop_ccn_id', e.target.value)} />
+            </Field>
+            <Field label="Intercrop name (optional)">
+              <input className="cat-input" value={settings.intercrop_crop_name} onChange={(e) => updateSettingField('intercrop_crop_name', e.target.value)} />
+            </Field>
+            <Field label="Platform">
+              <input className="cat-input" value={settings.platform} onChange={(e) => updateSettingField('platform', e.target.value)} />
+            </Field>
+          </div>
+          <p className="cat-msg mt2">Tokens are typically valid for about 30 days — if submissions start failing with an auth error, get a fresh one and paste it here.</p>
+        </div>
+      )}
+
+      {total > 0 && (
+        <div className="cat-card p4">
+          <div className="cat-row cat-between cat-wrap cat-gap2 mb3">
+            <div className="text-sm">
+              Batch <strong>{currentBatchNum}</strong> of <strong>{totalBatches}</strong>
+              <span className="cat-msg" style={{ display: 'inline', marginLeft: 8 }}>records {batchStart + 1}–{Math.min(batchStart + BATCH_SIZE, total)}</span>
+            </div>
+            <div className="cat-row cat-gap2">
+              <button className="cat-btn" onClick={() => goToBatch(batchStart - BATCH_SIZE)} disabled={batchStart === 0}>‹ Prev</button>
+              <button className="cat-btn" onClick={jumpToFirstPending} disabled={doneCount === total}>First pending</button>
+              <button className="cat-btn" onClick={() => goToBatch(batchStart + BATCH_SIZE)} disabled={batchStart + BATCH_SIZE >= total}>Next ›</button>
+            </div>
+          </div>
+
+          <div className="cat-table-wrap">
+            <table className="cat-table">
+              <thead>
+                <tr><th>Flu ID</th><th>Fmr ID</th><th>Status</th><th></th></tr>
+              </thead>
+              <tbody>
+                {batch.map((r) => {
+                  const locked = r.status === 'done';
+                  const busy = r.status === 'submitting';
+                  const elapsed = busy && r.startedAt ? ((Date.now() - r.startedAt) / 1000).toFixed(1) : null;
+                  return (
+                    <tr key={r.id}>
+                      <td style={{ width: 110 }}>
+                        <input className="cat-input cat-mono" value={r.flu_id} disabled={locked || busy} onChange={(e) => updateRecordField(r.id, 'flu_id', e.target.value)} />
+                      </td>
+                      <td style={{ width: 110 }}>
+                        <input className="cat-input cat-mono" value={r.fmr_id} disabled={locked || busy} onChange={(e) => updateRecordField(r.id, 'fmr_id', e.target.value)} />
+                      </td>
+                      <td style={{ width: 150 }}>
+                        <StatusPill status={r.status} />
+                        {busy && <div className="cat-msg mt1">waiting on server… {elapsed}s</div>}
+                        {r.message && !busy && <div className="cat-msg mt1">{r.message}</div>}
+                      </td>
+                      <td style={{ width: 90 }}>
+                        {locked ? (
+                          <button className="cat-btn" title="Unlock to edit — will need resubmitting" onClick={() => unlockRow(r.id)}>✎ Edit</button>
+                        ) : (
+                          <button className="cat-btn" disabled={busy || busyBatch} onClick={() => submitOne(r.id)}>
+                            {busy ? <span className="cat-spinner"></span> : 'Submit'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="cat-row cat-between mt3">
+            <button className="cat-btn cat-btn-primary" onClick={submitBatch} disabled={busyBatch || batch.every((r) => r.status === 'done')}>
+              {busyBatch ? <><span className="cat-spinner"></span> Submitting…</> : '✓ Submit this batch'}
+            </button>
+            {!confirmClear ? (
+              <button className="cat-btn cat-btn-danger" onClick={() => setConfirmClear(true)}>Reset all to blank</button>
+            ) : (
+              <span className="cat-row cat-gap2 cat-msg">
+                Blank out all {total} records back to pending?
+                <button className="cat-btn cat-btn-danger" onClick={doResetAll}>Yes, reset</button>
+                <button className="cat-btn" onClick={() => setConfirmClear(false)}>Cancel</button>
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<CropAllocationLedger />);
+</script>
+</body>
+</html>
