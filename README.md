@@ -8,6 +8,7 @@ there is no browser CORS and no preflight round-trip.
 |---|---|
 | 🌱 **Crop Allocation** | The 620+ record, 5-at-a-time bulk crop-allocation ledger. Progress is saved to `data.json`. |
 | 🌴 **Tree Count Checker** | Upload an Excel of `crop_id` / `org_id`, pulls `tree_count` and `acres` per crop, and flags crops with more than `acres × 60` trees. |
+| 🩺 **Crop / Tree Health** | Upload the same Excel, calls `crop-health-horti` per crop, and classifies each: `tree_count == 0` → **Crop Health**, otherwise **Tree Health**. Exports `crop_id, org_id, health_type, sowing_date`. |
 
 ## Run
 
@@ -29,6 +30,7 @@ krishivaas-tools/
     index.html           Sidebar shell (loads each tool in an iframe)
     allocation.html      Crop Allocation Ledger
     tree-count.html      Tree Count Checker
+    health-check.html    Crop / Tree Health Check
 ```
 
 Each tool lives in its own HTML file and runs inside an isolated iframe, so

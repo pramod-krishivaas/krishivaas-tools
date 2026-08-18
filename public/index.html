@@ -68,6 +68,9 @@
     <button class="navitem" data-src="tree-count.html" id="nav-tree">
       <span class="ico">🌴</span> Tree Count Checker
     </button>
+    <button class="navitem" data-src="health-check.html" id="nav-health">
+      <span class="ico">🩺</span> Crop / Tree Health
+    </button>
     <div class="sidebar-foot">
       Runs locally · all API calls go server-to-server (no CORS).
     </div>
@@ -91,10 +94,10 @@
 
   items.forEach((b) => b.addEventListener('click', () => activate(b.dataset.src)));
 
-  // restore tab from hash on load (#tree-count / #allocation)
+  // restore tab from hash on load (#allocation / #tree-count / #health-check)
   const initial = location.hash.slice(1);
-  if (initial === 'tree-count') activate('tree-count.html');
-  else activate('allocation.html');
+  const match = items.find((b) => b.dataset.src === initial + '.html');
+  activate(match ? match.dataset.src : 'allocation.html');
 </script>
 </body>
 </html>
