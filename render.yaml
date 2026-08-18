@@ -1,0 +1,13 @@
+# Render Blueprint — deploys this as a Node WEB SERVICE (runs server.js),
+# NOT a static site. A static site would serve public/ but none of the
+# /api/* proxy routes would exist (that is the cause of the 404s).
+services:
+  - type: web
+    name: krishivaas-tools
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
